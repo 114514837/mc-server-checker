@@ -1,0 +1,310 @@
+/* mc-server-checker 页面样式 */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+  background-color: #f4f4f5;
+  color: #333;
+}
+
+.container {
+  max-width: 620px;
+  margin: 48px auto;
+  padding: 0 16px;
+}
+
+h1 {
+  font-size: 26px;
+  margin-bottom: 6px;
+}
+
+.subtitle {
+  color: #777;
+  font-size: 14px;
+  margin-top: 0;
+}
+
+.check-form {
+  display: flex;
+  gap: 8px;
+  margin: 20px 0 6px;
+}
+
+.form-hint {
+  margin: 0 0 18px;
+  color: #dc2626;
+  font-size: 13px;
+}
+
+.check-form input {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.check-form input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.check-form button {
+  padding: 10px 22px;
+  font-size: 15px;
+  border: none;
+  border-radius: 6px;
+  background-color: #3b82f6;
+  color: #fff;
+  cursor: pointer;
+}
+
+.check-form button:disabled {
+  background-color: #9db8dd;
+  cursor: default;
+}
+
+.result-card {
+  background-color: #fff;
+  border: 1px solid #e3e3e8;
+  border-radius: 10px;
+  padding: 16px 20px 20px;
+}
+
+/* 卡片头部:图标 + 地址/状态 + 人数/版本 */
+.server-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #eee;
+}
+
+.server-icon {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  image-rendering: pixelated;
+  background-color: #fafafa;
+}
+
+.server-head-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.server-title-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.server-address {
+  font-size: 17px;
+  font-weight: 600;
+  word-break: break-all;
+  min-width: 0;
+}
+
+.status-pill {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 3px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-pill.waiting {
+  background-color: #f1f1f3;
+  color: #888;
+}
+
+.status-pill.online {
+  background-color: #e3f6ec;
+  color: #16a34a;
+}
+
+.status-pill.offline {
+  background-color: #fdecea;
+  color: #dc2626;
+}
+
+.server-detail-line {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #777;
+}
+
+.server-detail-line b {
+  color: #333;
+  font-weight: 600;
+}
+
+.dot-sep {
+  margin: 0 8px;
+  color: #ccc;
+}
+
+.info-label {
+  color: #666;
+  font-size: 14px;
+}
+
+.motd-box {
+  margin-top: 16px;
+}
+
+.motd-box .info-label {
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.motd-text {
+  margin: 8px 0 0;
+  background-color: #f7f7f8;
+  border: 1px solid #ececf0;
+  border-radius: 8px;
+  padding: 12px;
+  font-family: Consolas, "Courier New", monospace;
+  min-height: 48px;
+  line-height: 1.6;
+  white-space: pre-line; /* 保留 JS 写入的换行符,用于多行 MOTD */
+}
+
+.footer {
+  margin-top: 24px;
+  text-align: center;
+  color: #aaa;
+  font-size: 13px;
+}
+
+/* ---------- 高级信息区 ---------- */
+.advanced-card {
+  margin-top: 16px;
+  background-color: #fff;
+  border: 1px solid #e3e3e8;
+  border-radius: 10px;
+}
+
+.advanced-card summary {
+  cursor: pointer;
+  padding: 12px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+.advanced-card[open] summary {
+  border-bottom: 1px solid #eee;
+}
+
+#advanced-content {
+  padding: 4px 20px 16px;
+}
+
+.adv-group {
+  margin-top: 16px;
+}
+
+.adv-group-title {
+  margin: 0 0 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #f0f0f2;
+  font-size: 14px;
+  color: #2563eb;
+}
+
+.adv-row {
+  display: flex;
+  gap: 16px;
+  padding: 5px 0;
+  border-bottom: 1px dashed #f5f5f7;
+  font-size: 13px;
+}
+
+.adv-key {
+  flex: 0 0 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: Consolas, "Courier New", monospace;
+  color: #666;
+}
+
+.adv-key-desc {
+  font-family: "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+  font-size: 11px;
+  color: #aaa;
+}
+
+.adv-value {
+  flex: 1;
+  font-family: Consolas, "Courier New", monospace;
+  color: #333;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.adv-value img {
+  width: 64px;
+  height: 64px;
+  image-rendering: pixelated;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+@media (max-width: 520px) {
+  .adv-row {
+    flex-direction: column;
+    gap: 2px;
+  }
+  .adv-key {
+    flex-basis: auto;
+  }
+}
+
+/* ---------- 最近查询 ---------- */
+.history-box {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 18px;
+}
+
+.history-box[hidden] {
+  display: none;
+}
+
+.history-label {
+  color: #999;
+  font-size: 12px;
+}
+
+.history-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.history-chip {
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  background-color: #fff;
+  color: #555;
+  font-size: 12px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+
+.history-chip:hover {
+  border-color: #3b82f6;
+  color: #3b82f6;
+}

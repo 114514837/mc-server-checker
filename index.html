@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minecraft Server Checker</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="container">
+    <h1>Minecraft Server Checker</h1>
+    <p class="subtitle">输入服务器地址,查询它的状态、人数、版本和 MOTD</p>
+
+    <form id="check-form" class="check-form">
+      <input
+        type="text"
+        id="server-address"
+        placeholder="例如 mc.hypixel.net"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button type="submit" id="check-button">查询</button>
+    </form>
+
+    <p class="form-hint" id="form-hint" hidden></p>
+
+    <div class="history-box" id="history-box" hidden>
+      <span class="history-label">最近查询</span>
+      <div class="history-list" id="history-list"></div>
+    </div>
+
+    <section class="result-card">
+      <div class="server-head">
+        <img class="server-icon" id="server-icon" alt="服务器图标" hidden />
+        <div class="server-head-info">
+          <div class="server-title-line">
+            <span class="server-address" id="result-address">-</span>
+            <span class="status-pill waiting" id="result-status">等待查询</span>
+          </div>
+          <div class="server-detail-line">
+            <span>在线人数 <b id="result-players">-</b></span>
+            <span class="dot-sep">·</span>
+            <span>游戏版本 <b id="result-version">-</b></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="motd-box">
+        <span class="info-label">MOTD</span>
+        <p class="motd-text" id="result-motd">-</p>
+      </div>
+    </section>
+
+    <details class="advanced-card">
+      <summary>高级信息</summary>
+      <div id="advanced-content"></div>
+    </details>
+
+    <footer class="footer">数据来源:mcsrvstat.us</footer>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
