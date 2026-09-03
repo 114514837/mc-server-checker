@@ -331,3 +331,77 @@ h1 {
 .history-chip .chip-del:hover {
   color: #dc2626;
 }
+
+/* 高级区:模组/插件选项卡 */
+.adv-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 10px 0 2px;
+}
+
+.adv-tab {
+  border: 1px solid #d5d5da;
+  border-radius: 999px;
+  background: #fff;
+  color: #666;
+  font-size: 12px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+
+.adv-tab.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+
+.adv-tab-panel {
+  margin-top: 6px;
+}
+
+.adv-addon-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px dashed #f0f0f2;
+  font-size: 12px;
+}
+
+.adv-addon-item .nm {
+  color: #333;
+}
+
+.adv-addon-item .ver {
+  color: #999;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.adv-addon-empty {
+  color: #aaa;
+  font-size: 12px;
+  padding: 6px 0;
+}
+
+/* 高级区:玩家名单 UUID 勾选 */
+.adv-players {
+  white-space: pre-wrap;
+}
+
+.adv-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: #777;
+  cursor: pointer;
+  user-select: none;
+}
+
+.adv-toggle input {
+  cursor: pointer;
+  margin: 0;
+}

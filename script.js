@@ -141,6 +141,62 @@ function formatTime(value) {
   return isNaN(date) ? null : date.toLocaleString("zh-CN", { hour12: false });
 }
 
+// 选项卡(模组/插件):点按钮切换对应面板
+function renderTabs(container, tabs) {
+  const bar = document.createElement("div");
+  bar.className = "adv-tabs";
+  const panels = [];
+
+  tabs.forEach(function (tab, index) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "adv-tab" + (index === 0 ? " active" : "");
+    btn.textContent = tab.label;
+    btn.addEventListener("click", function () {
+      bar.querySelectorAll(".adv-tab").forEach(function (b) {
+        b.classList.remove("active");
+      });
+      btn.classList.add("active");
+      panels.forEach(function (panel, i) {
+        panel.hidden = i !== index;
+      });
+    });
+    bar.appendChild(btn);
+
+    const panel = document.createElement("div");
+    panel.className = "adv-tab-panel";
+    panel.hidden = index !== 0;
+    if (tab.items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "adv-addon-empty";
+      empty.textContent = "空";
+      panel.appendChild(empty);
+    } else {
+      tab.items.forEach(function (item) {
+        const row = document.createElement("div");
+        row.className = "adv-addon-item";
+        const nm = document.createElement("span");
+        nm.className = "nm";
+        nm.textContent = item.name;
+        row.appendChild(nm);
+        if (item.version) {
+          const ver = document.createElement("span");
+          ver.className = "ver";
+          ver.textContent = item.version;
+          row.appendChild(ver);
+        }
+        panel.appendChild(row);
+      });
+    }
+    panels.push(panel);
+  });
+
+  container.appendChild(bar);
+  panels.forEach(function (panel) {
+    container.appendChild(panel);
+  });
+}
+
 function renderAdvanced(data) {
   advancedContent.textContent = "";
   if (!data) return;
@@ -179,10 +235,15 @@ function renderAdvanced(data) {
     pushAdvRow(playerRows, "online", "当前在线人数", String(data.players.online));
     pushAdvRow(playerRows, "max", "最大人数", String(data.players.max));
     if (Array.isArray(data.players.list) && data.players.list.length > 0) {
-      const lines = data.players.list.map(function (player) {
-        return player.name + (player.uuid ? "  (" + player.uuid + ")" : "");
+      // 名单条目的名字在 name_clean / name_raw 里(和 version、motd 同规则),不是 name
+      const entries = data.players.list.map(function (player) {
+        return {
+          name: player.name_clean || player.name_raw || player.name || "未知玩家",
+          uuid: player.uuid || ""
+        };
       });
-      pushAdvRow(playerRows, "list", "在线玩家名单", lines.join("\n"));
+      // 默认只显示名字;行内提供"显示 UUID"勾选框
+      pushAdvRow(playerRows, "list", "在线玩家名单", { type: "players", entries: entries });
     } else {
       pushAdvRow(playerRows, "list", "在线玩家名单", "空");
     }
@@ -215,24 +276,24 @@ function renderAdvanced(data) {
   }
   groups.push({ title: "缓存信息", rows: cacheRows });
 
-  // ---------- 6. 模组与插件 ----------
-  const addonRows = [];
-  ["mods", "plugins"].forEach(function (key) {
+  // ---------- 6. 模组与插件(选项卡:空则显示"空") ----------
+  const addonTabs = ["mods", "plugins"].map(function (key) {
+    const label = key === "mods" ? "模组" : "插件";
     const list = data[key];
-    if (Array.isArray(list) && list.length > 0) {
-      const names = list.slice(0, 15).map(function (m) {
-        return m.name || JSON.stringify(m);
-      });
-      pushAdvRow(addonRows, key, "共 " + list.length + " 个", names.join("、") + (list.length > 15 ? "…" : ""));
-    } else if (Array.isArray(list)) {
-      pushAdvRow(addonRows, key, "", "无(0 个)");
-    } else {
-      pushAdvRow(addonRows, key, "", "无");
+    if (!Array.isArray(list) || list.length === 0) {
+      return { label: label + "(0)", items: [] };
     }
+    return {
+      label: label + "(" + list.length + ")",
+      items: list.map(function (m) {
+        return {
+          name: m.name || m.id || "?",
+          version: m.version || ""
+        };
+      })
+    };
   });
-  if (addonRows.length > 0) {
-    groups.push({ title: "模组与插件", rows: addonRows });
-  }
+  groups.push({ title: "模组与插件", tabs: addonTabs });
 
   // ---------- 7. 未列出的字段 ----------
   const coveredKeys = [
@@ -260,6 +321,13 @@ function renderAdvanced(data) {
     titleEl.textContent = group.title;
     groupEl.appendChild(titleEl);
 
+    // 选项卡型分组(模组/插件)不走表格行
+    if (group.tabs) {
+      renderTabs(groupEl, group.tabs);
+      advancedContent.appendChild(groupEl);
+      return;
+    }
+
     group.rows.forEach(function (row) {
       const rowEl = document.createElement("div");
       rowEl.className = "adv-row";
@@ -278,7 +346,7 @@ function renderAdvanced(data) {
       }
       rowEl.appendChild(keyEl);
 
-      // 右侧:值(icon 用图片显示,其余用文字)
+      // 右侧:值(icon 用图片,players 用名单+勾选框,其余用文字)
       const valueEl = document.createElement("span");
       valueEl.className = "adv-value";
       if (row.value && row.value.type === "icon") {
@@ -286,6 +354,35 @@ function renderAdvanced(data) {
         img.src = row.value.src;
         img.alt = "服务器图标";
         valueEl.appendChild(img);
+      } else if (row.value && row.value.type === "players") {
+        // 玩家名单:默认只显示名字,勾选"显示 UUID"后追加
+        const linesBox = document.createElement("div");
+        linesBox.className = "adv-players";
+        const hasUuid = row.value.entries.some(function (entry) {
+          return !!entry.uuid;
+        });
+
+        function paint(showUuid) {
+          const text = row.value.entries.map(function (entry) {
+            return entry.name + (showUuid && entry.uuid ? "  (" + entry.uuid + ")" : "");
+          }).join("\n");
+          linesBox.textContent = text;
+        }
+        paint(false);
+        valueEl.appendChild(linesBox);
+
+        if (hasUuid) {
+          const label = document.createElement("label");
+          label.className = "adv-toggle";
+          const cb = document.createElement("input");
+          cb.type = "checkbox";
+          cb.addEventListener("change", function () {
+            paint(cb.checked);
+          });
+          label.appendChild(cb);
+          label.appendChild(document.createTextNode("显示 UUID"));
+          valueEl.appendChild(label);
+        }
       } else {
         valueEl.textContent = row.value;
       }
