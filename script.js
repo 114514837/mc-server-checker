@@ -1,4 +1,4 @@
-/* Minecraft 服务器状态查询(数据来源:https://api.mcsrvstat.us/) */
+/* Minecraft 服务器状态查询(数据来源:https://api.mcstatus.io/v2/status/java) */
 
 const form = document.getElementById("check-form");
 const addressInput = document.getElementById("server-address");
@@ -36,11 +36,10 @@ async function handleCheck() {
 
   checkButton.disabled = true;
   checkButton.textContent = "查询中…";
-  showMessage("-");
+  showMessage("正在查询…");
 
   try {
-    // mcsrvstat.us 会替我们 ping 目标服务器并返回 JSON
-    const response = await fetch("https://api.mcsrvstat.us/2/" + address);
+    const response = await fetch("https://api.mcstatus.io/v2/status/java/" + encodeURIComponent(address));
     const data = await response.json();
     addHistory(address);
     showResult(address, data);
@@ -56,6 +55,19 @@ async function handleCheck() {
     checkButton.disabled = false;
     checkButton.textContent = "查询";
   }
+}
+
+/* 兼容 version 是字符串或对象两种形态 */
+function versionText(version) {
+  if (!version) return null;
+  if (typeof version === "string") return version;
+  return version.name_clean || version.name_raw || null;
+}
+
+/* motd 内容可能是字符串,也可能是多行数组,统一成数组 */
+function toLines(value) {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [String(value)];
 }
 
 function showResult(address, data) {
@@ -74,19 +86,19 @@ function showResult(address, data) {
     }
 
     resultPlayers.textContent = data.players.online + " / " + data.players.max;
-    resultVersion.textContent = data.version || "未知";
+    resultVersion.textContent = versionText(data.version) || "未知";
 
     // 优先用 raw 渲染彩色 MOTD;没有 raw 则退回纯文字
     resultMotd.textContent = "";
-    if (data.motd && data.motd.raw && data.motd.raw.length > 0) {
-      data.motd.raw.forEach(function (line, index) {
+    const rawLines = data.motd ? toLines(data.motd.raw) : [];
+    if (rawLines.length > 0) {
+      rawLines.forEach(function (line, index) {
         if (index > 0) resultMotd.appendChild(document.createElement("br"));
         appendColoredLine(resultMotd, line);
       });
-    } else if (data.motd && data.motd.clean) {
-      resultMotd.textContent = data.motd.clean.join("\n");
     } else {
-      resultMotd.textContent = "该服务器没有提供 MOTD";
+      const cleanLines = data.motd ? toLines(data.motd.clean) : [];
+      resultMotd.textContent = cleanLines.length > 0 ? cleanLines.join("\n") : "该服务器没有提供 MOTD";
     }
   } else {
     resultStatus.textContent = "离线";
@@ -115,71 +127,118 @@ function hideHint() {
 }
 
 /* ============================================================
- * 高级信息区:把 API 返回的所有字段分类展示
- * 数据来源:mcsrvstat.us /2/ 接口的 JSON
+ * 高级信息区:按 mcstatus.io 真实返回结构完整展示
+ * 字段拿不到值也显示"无",不让信息悄悄消失
  * ============================================================ */
 
-// 把"字段名 + 中文说明 + 值"记入 rows;值为空则跳过
 function pushAdvRow(rows, key, desc, value) {
-  if (value === undefined || value === null) return;
   rows.push({ key: key, desc: desc, value: value });
 }
 
-// 渲染整个高级信息区;data 为空时清空该区域
+// 时间可以是 ISO 字符串或毫秒数
+function formatTime(value) {
+  const date = new Date(value);
+  return isNaN(date) ? null : date.toLocaleString("zh-CN", { hour12: false });
+}
+
 function renderAdvanced(data) {
   advancedContent.textContent = "";
   if (!data) return;
 
   const groups = [];
 
-  // 1. 状态与连接
+  // ---------- 1. 状态与连接 ----------
   const connection = [];
-  pushAdvRow(connection, "online", "是否在线", data.online);
-  pushAdvRow(connection, "hostname", "查询的域名", data.hostname);
-  pushAdvRow(connection, "ip", "服务器 IP", data.ip);
-  pushAdvRow(connection, "port", "端口", data.port);
+  pushAdvRow(connection, "online", "是否在线", data.online ? "在线" : "离线");
+  pushAdvRow(connection, "host", "查询的域名", data.host || "无");
+  pushAdvRow(connection, "ip_address", "服务器 IP", data.ip_address || "无");
+  pushAdvRow(connection, "port", "端口", data.port != null ? String(data.port) : "无");
+  pushAdvRow(connection, "srv_record", "SRV 解析记录", data.srv_record || "无(SRV 未启用)");
   groups.push({ title: "状态与连接", rows: connection });
 
-  // 2. 版本与服务端
+  // ---------- 2. 版本与服务端 ----------
   const serverInfo = [];
-  pushAdvRow(serverInfo, "version", "游戏版本", data.version);
-  pushAdvRow(serverInfo, "protocol", "协议号", data.protocol);
-  pushAdvRow(serverInfo, "protocol_name", "协议名称", data.protocol_name);
-  pushAdvRow(serverInfo, "software", "服务端软件", data.software);
-  pushAdvRow(serverInfo, "eula_blocked", "是否被 EULA 拦截", data.eula_blocked);
+  pushAdvRow(serverInfo, "version", "游戏版本", versionText(data.version) || "无");
+  const protocol = data.version && typeof data.version === "object"
+    ? data.version.protocol
+    : data.protocol;
+  pushAdvRow(serverInfo, "protocol", "协议号", protocol != null ? String(protocol) : "无");
+  let softwareText = "无(服务器未上报)";
+  if (data.software) {
+    softwareText = typeof data.software === "string"
+      ? data.software
+      : data.software.name + (data.software.version ? " " + data.software.version : "");
+  }
+  pushAdvRow(serverInfo, "software", "服务端软件", softwareText);
+  pushAdvRow(serverInfo, "eula_blocked", "是否被 EULA 拦截", data.eula_blocked ? "是" : "否");
   groups.push({ title: "版本与服务端", rows: serverInfo });
 
-  // 3. 玩家
+  // ---------- 3. 玩家 ----------
   if (data.players) {
     const playerRows = [];
-    pushAdvRow(playerRows, "online", "当前在线人数", data.players.online);
-    pushAdvRow(playerRows, "max", "最大人数", data.players.max);
-    if (data.players.sample && data.players.sample.length > 0) {
-      const names = data.players.sample.map(function (player) {
-        return player.name;
+    pushAdvRow(playerRows, "online", "当前在线人数", String(data.players.online));
+    pushAdvRow(playerRows, "max", "最大人数", String(data.players.max));
+    if (Array.isArray(data.players.list) && data.players.list.length > 0) {
+      const lines = data.players.list.map(function (player) {
+        return player.name + (player.uuid ? "  (" + player.uuid + ")" : "");
       });
-      pushAdvRow(playerRows, "sample", "在线玩家名单", names.join(", "));
+      pushAdvRow(playerRows, "list", "在线玩家名单", lines.join("\n"));
+    } else {
+      pushAdvRow(playerRows, "list", "在线玩家名单", "空");
     }
     groups.push({ title: "玩家", rows: playerRows });
   }
 
-  // 4. MOTD 与图标
+  // ---------- 4. MOTD 与图标(纯文字 + 图标) ----------
   const motdRows = [];
-  if (data.motd && data.motd.clean && data.motd.clean.length > 0) {
-    pushAdvRow(motdRows, "motd.clean", "纯文字", data.motd.clean.join("\n"));
+  const cleanLines = data.motd ? toLines(data.motd.clean) : [];
+  if (cleanLines.length > 0) {
+    pushAdvRow(motdRows, "motd.clean", "纯文字", cleanLines.join("\n"));
+  } else {
+    pushAdvRow(motdRows, "motd.clean", "纯文字", "无");
   }
   if (data.icon) {
     pushAdvRow(motdRows, "icon", "服务器图标(64x64)", { type: "icon", src: data.icon });
+  } else {
+    pushAdvRow(motdRows, "icon", "服务器图标", "无");
   }
-  if (motdRows.length > 0) {
-    groups.push({ title: "MOTD 与图标", rows: motdRows });
+  groups.push({ title: "MOTD 与图标", rows: motdRows });
+
+  // ---------- 5. 缓存时间 ----------
+  const cacheRows = [];
+  pushAdvRow(cacheRows, "retrieved_at", "数据获取时间", formatTime(data.retrieved_at) || "无");
+  const expiresText = formatTime(data.expires_at);
+  pushAdvRow(cacheRows, "expires_at", "缓存过期时间", expiresText || "无");
+  if (data.expires_at && !isNaN(new Date(data.expires_at))) {
+    const remain = Math.round((new Date(data.expires_at) - Date.now()) / 1000);
+    pushAdvRow(cacheRows, "remaining", "距缓存过期", remain > 0 ? "约 " + remain + " 秒后重新探测" : "已过期,下次查询将重新探测");
+  }
+  groups.push({ title: "缓存信息", rows: cacheRows });
+
+  // ---------- 6. 模组与插件 ----------
+  const addonRows = [];
+  ["mods", "plugins"].forEach(function (key) {
+    const list = data[key];
+    if (Array.isArray(list) && list.length > 0) {
+      const names = list.slice(0, 15).map(function (m) {
+        return m.name || JSON.stringify(m);
+      });
+      pushAdvRow(addonRows, key, "共 " + list.length + " 个", names.join("、") + (list.length > 15 ? "…" : ""));
+    } else if (Array.isArray(list)) {
+      pushAdvRow(addonRows, key, "", "无(0 个)");
+    } else {
+      pushAdvRow(addonRows, key, "", "无");
+    }
+  });
+  if (addonRows.length > 0) {
+    groups.push({ title: "模组与插件", rows: addonRows });
   }
 
-  // 5. 显示其他字段，防止 API 以后新增字段
+  // ---------- 7. 未列出的字段 ----------
   const coveredKeys = [
-    "online", "hostname", "ip", "port", "version",
-    "protocol", "protocol_name", "software", "eula_blocked",
-    "players", "motd", "icon", "debug"
+    "online", "host", "port", "ip_address", "eula_blocked", "srv_record",
+    "retrieved_at", "expires_at", "version", "players",
+    "motd", "icon", "mods", "plugins", "software"
   ];
   const otherRows = [];
   Object.keys(data).forEach(function (key) {
@@ -191,7 +250,7 @@ function renderAdvanced(data) {
     groups.push({ title: "其他字段", rows: otherRows });
   }
 
-  // 按分组渲染成 DOM(用 textContent 写入,避免服务器内容注入 HTML)
+  // ---------- 渲染 ----------
   groups.forEach(function (group) {
     const groupEl = document.createElement("section");
     groupEl.className = "adv-group";
@@ -219,7 +278,7 @@ function renderAdvanced(data) {
       }
       rowEl.appendChild(keyEl);
 
-      // 右侧:值
+      // 右侧:值(icon 用图片显示,其余用文字)
       const valueEl = document.createElement("span");
       valueEl.className = "adv-value";
       if (row.value && row.value.type === "icon") {
@@ -251,7 +310,6 @@ const MOTD_COLORS = {
 };
 
 // 把一行带 § 颜色码的文字拆成多个 span 追加到 container
-// 例如 §61.21.6§r:§6 金色,§r 恢复默认
 // 用 createElement + textContent 而不是 innerHTML,
 // 因为服务器文字不可信,不能当成 HTML 执行
 function appendColoredLine(container, line) {
@@ -281,7 +339,6 @@ function appendColoredLine(container, line) {
 
   parts.forEach(function (part, index) {
     if (index === 0) {
-      // 最开头可能有不带颜色码的文字
       flush(part);
       return;
     }
@@ -337,21 +394,47 @@ function addHistory(address) {
   renderHistory();
 }
 
+// 从历史里删除一条
+function removeHistory(address) {
+  const list = loadHistory().filter(function (item) {
+    return item !== address;
+  });
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(list));
+  renderHistory();
+}
+
 function renderHistory() {
   const list = loadHistory();
   historyBox.hidden = list.length === 0;
   historyList.textContent = "";
 
   list.forEach(function (address) {
-    const chip = document.createElement("button");
-    chip.type = "button";
+    const chip = document.createElement("span");
     chip.className = "history-chip";
-    chip.textContent = address;
-    chip.title = "点击重新查询";
-    chip.addEventListener("click", function () {
+
+    // 点名字重新查询
+    const queryBtn = document.createElement("button");
+    queryBtn.type = "button";
+    queryBtn.className = "chip-query";
+    queryBtn.textContent = address;
+    queryBtn.title = "点击重新查询";
+    queryBtn.addEventListener("click", function () {
       addressInput.value = address;
       handleCheck();
     });
+    chip.appendChild(queryBtn);
+
+    // 点×删除这条历史
+    const delBtn = document.createElement("button");
+    delBtn.type = "button";
+    delBtn.className = "chip-del";
+    delBtn.textContent = "×";
+    delBtn.title = "从历史中删除";
+    delBtn.addEventListener("click", function () {
+      removeHistory(address);
+    });
+    chip.appendChild(delBtn);
+
     historyList.appendChild(chip);
   });
 }
